@@ -9,10 +9,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 短期記憶：依 chatId 儲存最近對話
+// 🧠 短期記憶
 const memoryStore = new Map();
-
-// 每個聊天室最多保留幾輪對話
 const MAX_MEMORY_MESSAGES = 10;
 
 function getMemory(chatId) {
@@ -26,7 +24,6 @@ function pushMemory(chatId, role, content) {
   const memory = getMemory(chatId);
   memory.push({ role, content });
 
-  // 只保留最近 N 則
   if (memory.length > MAX_MEMORY_MESSAGES) {
     memory.splice(0, memory.length - MAX_MEMORY_MESSAGES);
   }
@@ -37,16 +34,15 @@ bot.on("message", async (msg) => {
   const text = msg.text;
 
   if (!text) {
-    await bot.sendMessage(chatId, "我目前只支援文字訊息。");
+    await bot.sendMessage(chatId, "目前只支援文字訊息");
     return;
   }
 
-  // 額外指令：查看記憶
+  // 📌 查看記憶
   if (text === "/memory") {
     const memory = getMemory(chatId);
-
     if (memory.length === 0) {
-      await bot.sendMessage(chatId, "我目前還沒有記住這段對話內容。");
+      await bot.sendMessage(chatId, "目前沒有記憶");
       return;
     }
 
@@ -54,14 +50,14 @@ bot.on("message", async (msg) => {
       .map((m, i) => `${i + 1}. [${m.role}] ${m.content}`)
       .join("\n\n");
 
-    await bot.sendMessage(chatId, `這是我目前保留的最近記憶：\n\n${preview}`);
+    await bot.sendMessage(chatId, preview);
     return;
   }
 
-  // 額外指令：清空記憶
+  // 📌 清除記憶
   if (text === "/forget") {
     memoryStore.set(chatId, []);
-    await bot.sendMessage(chatId, "我已經清空這段對話的短期記憶。");
+    await bot.sendMessage(chatId, "記憶已清空");
     return;
   }
 
@@ -74,37 +70,67 @@ bot.on("message", async (msg) => {
         {
           role: "system",
           content: `
-你是 Alex 的貼身 AI 助理（Chief of Staff）。
+你是 Alex 的貼身 AI 助理（Chief of Staff），同時也是他的技術合夥人與資深工程師。
+
+你的核心角色：
+1. 商業策略助理
+2. 系統設計師
+3. 軟體工程師
 
 你的風格：
 - 直接、精準、不講廢話
-- 不要過度保守或一直講「僅供參考」
 - 要給判斷，不只是整理資訊
-- 可以提出建議、策略與下一步
+- 優先解決問題，不要只講概念
 
-你的任務：
-- 幫 Alex 做商業決策
-- 幫他拆解創業與投資機會
-- 幫他快速理解複雜問題
-- 必要時幫他寫程式、設計系統
-- 可以用命理（八字、塔羅、紫微）作為輔助推演，但要結合現實分析
+【工程師模式原則】
+- 需求清楚 → 直接給可執行方案
+- 需求不清楚 → 先問 1~3 個關鍵問題
+- 程式碼要「可跑」，不是片段
+- 優先用簡單、主流、穩定技術
+
+【寫程式格式】
+1. 結論
+2. 技術選擇
+3. 步驟
+4. 完整程式碼
+5. 如何執行
+6. 下一步
+
+【Debug 格式】
+1. 問題
+2. 解法
+3. 修正後 code
+4. 驗證方式
+
+【系統設計格式】
+1. 需求
+2. 架構
+3. API / DB
+4. MVP
+5. 風險
 
 關於 Alex：
-- 創業者，正在打造多個事業
-- 重視效率與結果
-- 不喜歡空話與模糊建議
+- 創業者
+- 多專案並行
+- 重效率
+- 不喜歡廢話
 
 回覆原則：
-- 優先給結論
-- 再給理由
-- 最後給建議或下一步
+- 先結論
+- 再理由
+- 再下一步
+- 技術問題直接給可用內容
 `
         },
         {
           role: "system",
-          content: "Alex 出生於 1989/10/11 上午10:56 台北，目前正在發展多個創業與投資項目。"
+          content:
+            "Alex 出生於 1989/10/11 上午10:56 台北，目前正在發展多個創業與投資項目。"
         },
+
+        // 👉 真正的記憶（只保留這個，不用 JSON.stringify）
         ...memory,
+
         {
           role: "user",
           content: text
@@ -113,18 +139,17 @@ bot.on("message", async (msg) => {
     });
 
     const reply =
-      completion?.choices?.[0]?.message?.content ||
-      "我剛剛想了一下，但沒有成功整理出答案。";
+      completion?.choices?.[0]?.message?.content || "出錯了QQ";
 
-    // 把這次對話存進短期記憶
+    // 🧠 存記憶
     pushMemory(chatId, "user", text);
     pushMemory(chatId, "assistant", reply);
 
     await bot.sendMessage(chatId, reply);
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     await bot.sendMessage(chatId, "出錯了QQ");
   }
 });
 
-console.log("🤖 Bot with memory is running...");
+console.log("🤖 AI Assistant Ready");
