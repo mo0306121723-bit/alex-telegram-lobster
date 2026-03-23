@@ -9,6 +9,29 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// 短期記憶：依 chatId 儲存最近對話
+const memoryStore = new Map();
+
+// 每個聊天室最多保留幾輪對話
+const MAX_MEMORY_MESSAGES = 10;
+
+function getMemory(chatId) {
+  if (!memoryStore.has(chatId)) {
+    memoryStore.set(chatId, []);
+  }
+  return memoryStore.get(chatId);
+}
+
+function pushMemory(chatId, role, content) {
+  const memory = getMemory(chatId);
+  memory.push({ role, content });
+
+  // 只保留最近 N 則
+  if (memory.length > MAX_MEMORY_MESSAGES) {
+    memory.splice(0, memory.length - MAX_MEMORY_MESSAGES);
+  }
+}
+
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
@@ -18,7 +41,33 @@ bot.on("message", async (msg) => {
     return;
   }
 
+  // 額外指令：查看記憶
+  if (text === "/memory") {
+    const memory = getMemory(chatId);
+
+    if (memory.length === 0) {
+      await bot.sendMessage(chatId, "我目前還沒有記住這段對話內容。");
+      return;
+    }
+
+    const preview = memory
+      .map((m, i) => `${i + 1}. [${m.role}] ${m.content}`)
+      .join("\n\n");
+
+    await bot.sendMessage(chatId, `這是我目前保留的最近記憶：\n\n${preview}`);
+    return;
+  }
+
+  // 額外指令：清空記憶
+  if (text === "/forget") {
+    memoryStore.set(chatId, []);
+    await bot.sendMessage(chatId, "我已經清空這段對話的短期記憶。");
+    return;
+  }
+
   try {
+    const memory = getMemory(chatId);
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -55,6 +104,7 @@ bot.on("message", async (msg) => {
           role: "system",
           content: "Alex 出生於 1989/10/11 上午10:56 台北，目前正在發展多個創業與投資項目。"
         },
+        ...memory,
         {
           role: "user",
           content: text
@@ -63,7 +113,12 @@ bot.on("message", async (msg) => {
     });
 
     const reply =
-      completion?.choices?.[0]?.message?.content || "我剛剛想了一下，但沒有成功整理出答案。";
+      completion?.choices?.[0]?.message?.content ||
+      "我剛剛想了一下，但沒有成功整理出答案。";
+
+    // 把這次對話存進短期記憶
+    pushMemory(chatId, "user", text);
+    pushMemory(chatId, "assistant", reply);
 
     await bot.sendMessage(chatId, reply);
   } catch (error) {
@@ -72,4 +127,4 @@ bot.on("message", async (msg) => {
   }
 });
 
-console.log("🤖 Bot is running...");
+console.log("🤖 Bot with memory is running...");
