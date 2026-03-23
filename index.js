@@ -9,7 +9,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 🧠 短期記憶
+// 🧠 記憶系統
 const memoryStore = new Map();
 const MAX_MEMORY_MESSAGES = 10;
 
@@ -80,7 +80,7 @@ bot.on("message", async (msg) => {
 你的風格：
 - 直接、精準、不講廢話
 - 要給判斷，不只是整理資訊
-- 優先解決問題，不要只講概念
+- 優先解決問題
 
 【工程師模式原則】
 - 需求清楚 → 直接給可執行方案
@@ -128,7 +128,14 @@ bot.on("message", async (msg) => {
             "Alex 出生於 1989/10/11 上午10:56 台北，目前正在發展多個創業與投資項目。"
         },
 
-        // 👉 真正的記憶（只保留這個，不用 JSON.stringify）
+        // 🔥 強制使用記憶（關鍵升級）
+        {
+          role: "system",
+          content:
+            "回答問題前，請優先根據對話記憶推論，不要忽略已知資訊。"
+        },
+
+        // 🧠 記憶
         ...memory,
 
         {
@@ -152,4 +159,4 @@ bot.on("message", async (msg) => {
   }
 });
 
-console.log("🤖 AI Assistant Ready");
+console.log("🤖 AI Assistant Ready v2");
