@@ -1,5 +1,5 @@
 const TelegramBot = require("node-telegram-bot-api");
-const OpenAI = require("openai");
+const OpenAI = require("openai").default;
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
   polling: true,
@@ -21,10 +21,10 @@ bot.on("message", async (msg) => {
 
     const reply = completion.choices[0].message.content;
 
-    bot.sendMessage(chatId, reply);
+    await bot.sendMessage(chatId, reply);
   } catch (error) {
     console.error(error);
-    bot.sendMessage(chatId, "出錯了QQ");
+    await bot.sendMessage(chatId, "出錯了QQ");
   }
 });
 
