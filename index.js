@@ -13,13 +13,18 @@ bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
 
+  if (!text) {
+    await bot.sendMessage(chatId, "我目前只支援文字訊息。");
+    return;
+  }
+
   try {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-  {
-    role: "system",
-    content: `
+        {
+          role: "system",
+          content: `
 你是 Alex 的貼身 AI 助理（Chief of Staff）。
 
 你的風格：
@@ -45,14 +50,20 @@ bot.on("message", async (msg) => {
 - 再給理由
 - 最後給建議或下一步
 `
-  },
-  {
-    role: "user",
-    content: text
-  }
-]
+        },
+        {
+          role: "system",
+          content: "Alex 出生於 1989/10/11 上午10:56 台北，目前正在發展多個創業與投資項目。"
+        },
+        {
+          role: "user",
+          content: text
+        }
+      ]
+    });
 
-    const reply = completion.choices[0].message.content;
+    const reply =
+      completion?.choices?.[0]?.message?.content || "我剛剛想了一下，但沒有成功整理出答案。";
 
     await bot.sendMessage(chatId, reply);
   } catch (error) {
