@@ -33,14 +33,17 @@ bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const text = msg.text;
 
+  console.log("📩 incoming message:", { chatId, text });
+
   if (!text) {
     await bot.sendMessage(chatId, "目前只支援文字訊息");
     return;
   }
 
-  // 📌 查看記憶
   if (text === "/memory") {
     const memory = getMemory(chatId);
+    console.log("🧠 memory requested:", memory);
+
     if (memory.length === 0) {
       await bot.sendMessage(chatId, "目前沒有記憶");
       return;
@@ -54,15 +57,18 @@ bot.on("message", async (msg) => {
     return;
   }
 
-  // 📌 清除記憶
   if (text === "/forget") {
     memoryStore.set(chatId, []);
+    console.log("🗑️ memory cleared for:", chatId);
     await bot.sendMessage(chatId, "記憶已清空");
     return;
   }
 
   try {
     const memory = getMemory(chatId);
+    console.log("🧠 current memory:", memory);
+
+    console.log("🔥 hitting OpenAI API...");
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -127,17 +133,12 @@ bot.on("message", async (msg) => {
           content:
             "Alex 出生於 1989/10/11 上午10:56 台北，目前正在發展多個創業與投資項目。"
         },
-
-        // 🔥 強制使用記憶（關鍵升級）
         {
           role: "system",
           content:
             "回答問題前，請優先根據對話記憶推論，不要忽略已知資訊。"
         },
-
-        // 🧠 記憶
         ...memory,
-
         {
           role: "user",
           content: text
@@ -148,15 +149,17 @@ bot.on("message", async (msg) => {
     const reply =
       completion?.choices?.[0]?.message?.content || "出錯了QQ";
 
-    // 🧠 存記憶
+    console.log("✅ OpenAI replied:", reply);
+
     pushMemory(chatId, "user", text);
     pushMemory(chatId, "assistant", reply);
 
     await bot.sendMessage(chatId, reply);
+    console.log("📤 reply sent to Telegram");
   } catch (err) {
-    console.error(err);
+    console.error("❌ BOT ERROR:", err);
     await bot.sendMessage(chatId, "出錯了QQ");
   }
 });
 
-console.log("🤖 AI Assistant Ready v2");
+console.log("🤖 AI Assistant Ready v3");
