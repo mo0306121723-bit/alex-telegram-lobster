@@ -1,5 +1,5 @@
-import TelegramBot from "node-telegram-bot-api";
-import OpenAI from "openai";
+const TelegramBot = require("node-telegram-bot-api");
+const OpenAI = require("openai");
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN, {
   polling: true,
